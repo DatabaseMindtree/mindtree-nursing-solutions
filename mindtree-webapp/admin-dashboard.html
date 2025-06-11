@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Mindtree Nursing Solutions</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="admin-dashboard">
+        <h2>Admin Dashboard</h2>
+        <button onclick="logoutAdmin()" class="btn logout-btn">Logout</button>
+
+        <!-- Form Submissions -->
+        <section>
+            <h3>Client Form Submissions</h3>
+            <table id="submissionsTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Country</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody id="submissionsBody"></tbody>
+            </table>
+        </section>
+
+        <!-- Edit Website Content -->
+        <section>
+            <h3>Edit Website Content</h3>
+            <div class="form-group">
+                <label for="heroText">Hero Text (Top):</label>
+                <input type="text" id="heroText" placeholder="WANT TO BE A REGISTERED NURSE IN">
+            </div>
+            <div class="form-group">
+                <label for="heroSubText">Hero Text (Bottom):</label>
+                <input type="text" id="heroSubText" placeholder="NEW ZEALAND OR AUSTRALIA">
+            </div>
+            <div class="form-group">
+                <label for="videoUrl">Video URL (Courses Section):</label>
+                <input type="text" id="videoUrl" placeholder="videos/asisanet final.mp4">
+            </div>
+            <button onclick="saveContent()" class="btn save-btn">Save Changes</button>
+        </section>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "your-api-key",
+            authDomain: "your-auth-domain",
+            projectId: "your-project-id",
+            storageBucket: "your-storage-bucket",
+            messagingSenderId: "your-messaging-sender-id",
+            appId: "your-app-id"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Check if admin is logged in
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'admin-login.html';
+            } else {
+                loadSubmissions();
+                loadContent();
+            }
+        });
+
+        function logoutAdmin() {
+            auth.signOut().then(() => {
+                window.location.href = 'admin-login.html';
+            });
+        }
+
+        function loadSubmissions() {
+            const tbody = document.getElementById('submissionsBody');
+            db.collection('eligibilitySubmissions').orderBy('timestamp', 'desc').get()
+                .then((querySnapshot) => {
+                    tbody.innerHTML = '';
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        const row = `
+                            <tr>
+                                <td>${data.name}</td>
+                                <td>${data.email}</td>
+                                <td>${data.phone}</td>
+                                <td>${data.country}</td>
+                                <td>${data.timestamp ? data.timestamp.toDate().toLocaleString() : 'N/A'}</td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                })
+                .catch((error) => {
+                    console.error("Error loading submissions: ", error);
+                });
+        }
+
+        function loadContent() {
+            db.collection('websiteContent').doc('homePage').get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        document.getElementById('heroText').value = data.heroText || '';
+                        document.getElementById('heroSubText').value = data.heroSubText || '';
+                        document.getElementById('videoUrl').value = data.videoUrl || '';
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error loading content: ", error);
+                });
+        }
+
+        function saveContent() {
+            const heroText = document.getElementById('heroText').value;
+            const heroSubText = document.getElementById('heroSubText').value;
+            const videoUrl = document.getElementById('videoUrl').value;
+
+            db.collection('websiteContent').doc('homePage').set({
+                heroText: heroText,
+                heroSubText: heroSubText,
+                videoUrl: videoUrl,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                alert('Content updated successfully!');
+            })
+            .catch((error) => {
+                console.error("Error saving content: ", error);
+                alert('Error updating content. Please try again.');
+            });
+        }
+    </script>
+
+    <style>
+        .admin-dashboard {
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .logout-btn {
+            background-color: #f44336;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .logout-btn:hover {
+            background-color: #d32f2f;
+        }
+        .save-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .save-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</body>
+</html>
